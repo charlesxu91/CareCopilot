@@ -18,26 +18,113 @@ CareCopilot 是一个面向中文医疗助手产品的 Java / Spring Boot 后端
 - 从脱敏文本与 Agent 执行 telemetry 导出可训练 JSONL 数据。
 - 提供健康检查、Prometheus 指标、Docker Compose、Kubernetes 和 Helm 部署资产。
 
-## 架构
+## 架构蓝图
 
 ```mermaid
 flowchart TB
-  Client["客户端 / App / 测试控制台"] --> API["CareCopilot Spring Boot API"]
-  API --> Orchestrator["CareCopilot Orchestrator Agent"]
-  Orchestrator --> Intent["顶层意图路由<br/>GENERAL_CHAT / MEDICAL_RELATED"]
-  Intent --> General["通用对话回答"]
-  Intent --> Confirm["医疗确认卡片<br/>症状 / 报告 / 就诊"]
-  Confirm --> MedicalAgents["医疗 Agent 层"]
-  MedicalAgents --> Symptom["症状分诊 Agent"]
-  MedicalAgents --> Report["报告解读 Agent"]
-  MedicalAgents --> Visit["就诊准备 Agent"]
-  MedicalAgents --> Skills["医疗 Skill 层<br/>红旗判断、病史采集、报告解析、就诊摘要"]
-  Skills --> Stores["病例库 / 时间线 / 审计库"]
-  Skills --> AgentPlane["AgentPlane Client<br/>session、run、event、artifact、job"]
-  Stores --> Dataset["可训练 JSONL 导出"]
+  subgraph Channels["产品入口"]
+    App["CareCopilot App"]
+    Console["AgentPlane 测试控制台"]
+    OpenAPI["合作方 / Open API Client"]
+  end
+
+  subgraph Backend["CareCopilot 后端"]
+    API["Spring Boot API<br/>病例、对话、工作流、数据集"]
+    Context["病例与对话上下文<br/>槽位、待确认意图、记忆"]
+    Safety["安全与确认 Guard<br/>红旗症状、用药边界、免责声明"]
+    Orchestrator["Orchestrator Agent<br/>观察、规划、行动、追踪"]
+    Router["意图与任务路由<br/>GENERAL_CHAT / MEDICAL_RELATED"]
+    Card["医疗确认卡片<br/>症状分诊 / 报告解读 / 就诊准备"]
+  end
+
+  subgraph Agents["医疗 Agent 层"]
+    General["通用对话 Agent"]
+    Supervisor["医疗 Supervisor Agent"]
+    Symptom["症状分诊 Agent"]
+    Report["报告解读 Agent"]
+    Visit["就诊准备 Agent"]
+    Followup["随访与健康教育 Agent"]
+  end
+
+  subgraph Skills["医疗 Skill 层"]
+    History["病史采集 Skill"]
+    RedFlag["红旗分诊 Skill"]
+    ReportParse["报告解析 Skill"]
+    Medication["用药安全 Skill"]
+    Guideline["指南检索 Skill"]
+    Department["科室与就诊路径 Skill"]
+    Summary["就诊摘要生成 Skill"]
+  end
+
+  subgraph MCP["MCP Tool Server 层"]
+    KnowledgeMcp["医疗知识库 MCP"]
+    CaseMcp["病例库 MCP"]
+    ReportMcp["报告 / OCR MCP"]
+    DrugMcp["药物相互作用 MCP"]
+    HospitalMcp["医院 / 挂号 MCP"]
+  end
+
+  subgraph Data["医疗数据层"]
+    Knowledge["医疗知识库<br/>指南、FAQ、循证材料、向量索引"]
+    CaseStore["病例库<br/>档案、时间线、对话"]
+    Audit["审计与 Trace 库<br/>tool call、决策、安全检查"]
+    Dataset["训练数据构建<br/>脱敏文本 + Agent telemetry"]
+    Policy["安全策略库<br/>红旗规则、免责声明、升级就医规则"]
+  end
+
+  subgraph Infra["Agent Infra 边界"]
+    AgentPlane["AgentPlane Control Plane<br/>session、run、event、artifact、job"]
+    Worker["AgentScope Java Worker<br/>Agent runtime 执行"]
+    Model["模型网关<br/>本地或云端 LLM"]
+  end
+
+  App --> API
+  Console --> API
+  OpenAPI --> API
+  API --> Context
+  API --> Safety
+  Context --> Orchestrator
+  Safety --> Orchestrator
+  Orchestrator --> Router
+  Router --> General
+  Router --> Card
+  Card --> Supervisor
+  Supervisor --> Symptom
+  Supervisor --> Report
+  Supervisor --> Visit
+  Supervisor --> Followup
+  Symptom --> History
+  Symptom --> RedFlag
+  Symptom --> Medication
+  Report --> ReportParse
+  Report --> Guideline
+  Visit --> Department
+  Visit --> Summary
+  Visit --> Medication
+  Followup --> Guideline
+  History --> CaseMcp
+  RedFlag --> KnowledgeMcp
+  RedFlag --> Policy
+  ReportParse --> ReportMcp
+  Medication --> DrugMcp
+  Medication --> Policy
+  Guideline --> KnowledgeMcp
+  Department --> HospitalMcp
+  Summary --> CaseMcp
+  KnowledgeMcp --> Knowledge
+  CaseMcp --> CaseStore
+  ReportMcp --> CaseStore
+  DrugMcp --> Knowledge
+  HospitalMcp --> Knowledge
+  Orchestrator --> AgentPlane
+  AgentPlane --> Worker
+  Worker --> Model
+  Context --> CaseStore
+  Orchestrator --> Audit
+  Audit --> Dataset
 ```
 
-CareCopilot 是医疗领域 Agent 应用，AgentPlane 是底层 Agent Infra 控制平面。CareCopilot 通过 AgentPlane 记录 session、run、event、artifact 和 worker job。开发环境可使用内存状态存储，生产环境可使用 PostgreSQL。
+CareCopilot 是医疗领域 Agent 应用，AgentPlane 是底层 Agent Infra 控制平面，用于记录 session、run、event、artifact 和 worker job。当前后端已经落地病例库、对话上下文、医疗确认流程、三类医疗工作流、审计轨迹、训练数据导出和 AgentPlane 集成。医疗知识库、MCP Tool Server 和更完整的医疗 Skill 层是后续生产级架构面。
 
 ## 目录结构
 

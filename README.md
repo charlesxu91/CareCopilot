@@ -18,26 +18,113 @@ CareCopilot is a Java and Spring Boot backend for a Chinese medical-assistant ag
 - Exports trainable JSONL records from redacted text and agent telemetry.
 - Provides health probes, Prometheus metrics, Docker Compose, Kubernetes, and Helm deployment assets.
 
-## Architecture
+## Architecture Blueprint
 
 ```mermaid
 flowchart TB
-  Client["Client / App / Test Console"] --> API["CareCopilot Spring Boot API"]
-  API --> Orchestrator["CareCopilot Orchestrator Agent"]
-  Orchestrator --> Intent["Top-level Intent Router<br/>GENERAL_CHAT / MEDICAL_RELATED"]
-  Intent --> General["General Chat Answer"]
-  Intent --> Confirm["Medical Confirmation Card<br/>symptom / report / visit"]
-  Confirm --> MedicalAgents["Medical Agent Layer"]
-  MedicalAgents --> Symptom["Symptom Triage Agent"]
-  MedicalAgents --> Report["Report Explanation Agent"]
-  MedicalAgents --> Visit["Visit Preparation Agent"]
-  MedicalAgents --> Skills["Medical Skill Layer<br/>red flag, history collection, report parsing, visit summary"]
-  Skills --> Stores["Case Store / Timeline / Audit Store"]
-  Skills --> AgentPlane["AgentPlane Client<br/>sessions, runs, events, artifacts, jobs"]
-  Stores --> Dataset["Trainable JSONL Export"]
+  subgraph Channels["Product Channels"]
+    App["CareCopilot App"]
+    Console["AgentPlane Test Console"]
+    OpenAPI["Partner / Open API Clients"]
+  end
+
+  subgraph Backend["CareCopilot Backend"]
+    API["Spring Boot API<br/>case, chat, workflow, dataset"]
+    Context["Case & Conversation Context<br/>slots, pending confirmations, memory"]
+    Safety["Safety & Consent Guard<br/>red flags, medication boundary, disclaimer"]
+    Orchestrator["Orchestrator Agent<br/>observe, plan, act, trace"]
+    Router["Intent & Task Router<br/>GENERAL_CHAT / MEDICAL_RELATED"]
+    Card["Medical Confirmation Card<br/>symptom triage / report explanation / visit preparation"]
+  end
+
+  subgraph Agents["Medical Agent Layer"]
+    General["General Chat Agent"]
+    Supervisor["Medical Supervisor Agent"]
+    Symptom["Symptom Triage Agent"]
+    Report["Report Explanation Agent"]
+    Visit["Visit Preparation Agent"]
+    Followup["Follow-up & Patient Education Agent"]
+  end
+
+  subgraph Skills["Medical Skill Layer"]
+    History["History Collection Skill"]
+    RedFlag["Red-flag Triage Skill"]
+    ReportParse["Report Parsing Skill"]
+    Medication["Medication Safety Skill"]
+    Guideline["Guideline Retrieval Skill"]
+    Department["Department & Visit Routing Skill"]
+    Summary["Visit Summary Composer"]
+  end
+
+  subgraph MCP["MCP Tool Server Layer"]
+    KnowledgeMcp["Medical Knowledge MCP"]
+    CaseMcp["Case Record MCP"]
+    ReportMcp["Report / OCR MCP"]
+    DrugMcp["Drug Interaction MCP"]
+    HospitalMcp["Hospital / Appointment MCP"]
+  end
+
+  subgraph Data["Medical Data Layer"]
+    Knowledge["Medical Knowledge Base<br/>guidelines, FAQ, evidence, vector index"]
+    CaseStore["Case Store<br/>profile, timeline, conversation"]
+    Audit["Audit & Trace Store<br/>tool calls, decisions, safety checks"]
+    Dataset["Training Dataset Builder<br/>redacted text + agent telemetry"]
+    Policy["Safety Policy Store<br/>red flags, disclaimers, escalation rules"]
+  end
+
+  subgraph Infra["Agent Infra Boundary"]
+    AgentPlane["AgentPlane Control Plane<br/>sessions, runs, events, artifacts, jobs"]
+    Worker["AgentScope Java Worker<br/>agent runtime execution"]
+    Model["Model Gateway<br/>local or provider LLMs"]
+  end
+
+  App --> API
+  Console --> API
+  OpenAPI --> API
+  API --> Context
+  API --> Safety
+  Context --> Orchestrator
+  Safety --> Orchestrator
+  Orchestrator --> Router
+  Router --> General
+  Router --> Card
+  Card --> Supervisor
+  Supervisor --> Symptom
+  Supervisor --> Report
+  Supervisor --> Visit
+  Supervisor --> Followup
+  Symptom --> History
+  Symptom --> RedFlag
+  Symptom --> Medication
+  Report --> ReportParse
+  Report --> Guideline
+  Visit --> Department
+  Visit --> Summary
+  Visit --> Medication
+  Followup --> Guideline
+  History --> CaseMcp
+  RedFlag --> KnowledgeMcp
+  RedFlag --> Policy
+  ReportParse --> ReportMcp
+  Medication --> DrugMcp
+  Medication --> Policy
+  Guideline --> KnowledgeMcp
+  Department --> HospitalMcp
+  Summary --> CaseMcp
+  KnowledgeMcp --> Knowledge
+  CaseMcp --> CaseStore
+  ReportMcp --> CaseStore
+  DrugMcp --> Knowledge
+  HospitalMcp --> Knowledge
+  Orchestrator --> AgentPlane
+  AgentPlane --> Worker
+  Worker --> Model
+  Context --> CaseStore
+  Orchestrator --> Audit
+  Audit --> Dataset
 ```
 
-CareCopilot is the domain agent application. AgentPlane is the infrastructure control plane that records sessions, runs, events, artifacts, and worker jobs. CareCopilot can run with an in-memory state store for local development or PostgreSQL for production.
+CareCopilot is the domain agent application. AgentPlane is the infrastructure control plane that records sessions, runs, events, artifacts, and worker jobs. The current backend implements the case store, conversation context, medical confirmation flow, three medical workflows, audit trail, dataset export, and AgentPlane integration. The knowledge base, MCP tool servers, and richer skill layer define the next production architecture surface.
 
 ## Repository Layout
 
