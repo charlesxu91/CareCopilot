@@ -1,0 +1,6 @@
+target/
+.mvn/*
+!.mvn/settings.xml
+*.iml
+.idea/
+.DS_Store

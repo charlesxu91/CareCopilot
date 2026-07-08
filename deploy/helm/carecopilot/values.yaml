@@ -1,0 +1,32 @@
+replicaCount: 2
+
+image:
+  repository: carecopilot-backend
+  tag: 0.1.0
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+
+agentplane:
+  baseUrl: http://agentplane-control-plane.agentplane.svc.cluster.local:8080
+  connectTimeoutMs: 2000
+  readTimeoutMs: 10000
+
+postgres:
+  image: postgres:16
+  database: carecopilot
+  username: carecopilot
+  password: carecopilot
+  storage: 10Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+
+serviceMonitor:
+  enabled: true

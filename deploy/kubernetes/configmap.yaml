@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: carecopilot-config
+  namespace: carecopilot
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  CARECOPILOT_JDBC_URL: jdbc:postgresql://carecopilot-postgres:5432/carecopilot
+  CARECOPILOT_JDBC_USERNAME: carecopilot
+  CARECOPILOT_AGENTPLANE_BASE_URL: http://agentplane-control-plane.agentplane.svc.cluster.local:8080
+  CARECOPILOT_AGENTPLANE_CONNECT_TIMEOUT_MS: "2000"
+  CARECOPILOT_AGENTPLANE_READ_TIMEOUT_MS: "10000"
+  JAVA_OPTS: -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError

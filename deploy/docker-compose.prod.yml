@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: carecopilot
+      POSTGRES_USER: carecopilot
+      POSTGRES_PASSWORD: carecopilot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carecopilot -d carecopilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  carecopilot:
+    build:
+      context: ..
+    image: carecopilot-backend:0.1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CARECOPILOT_JDBC_URL: jdbc:postgresql://postgres:5432/carecopilot
+      CARECOPILOT_JDBC_USERNAME: carecopilot
+      CARECOPILOT_JDBC_PASSWORD: carecopilot
+      CARECOPILOT_AGENTPLANE_BASE_URL: ${CARECOPILOT_AGENTPLANE_BASE_URL:-http://agentplane:8080}
+      CARECOPILOT_AGENTPLANE_CONNECT_TIMEOUT_MS: 2000
+      CARECOPILOT_AGENTPLANE_READ_TIMEOUT_MS: 10000
+      JAVA_OPTS: -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError
+    ports:
+      - "18081:8080"
+
+volumes:
+  postgres-data:

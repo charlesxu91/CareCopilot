@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  CARECOPILOT_JDBC_URL: jdbc:postgresql://{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.database }}
+  CARECOPILOT_JDBC_USERNAME: {{ .Values.postgres.username | quote }}
+  CARECOPILOT_AGENTPLANE_BASE_URL: {{ .Values.agentplane.baseUrl | quote }}
+  CARECOPILOT_AGENTPLANE_CONNECT_TIMEOUT_MS: {{ .Values.agentplane.connectTimeoutMs | quote }}
+  CARECOPILOT_AGENTPLANE_READ_TIMEOUT_MS: {{ .Values.agentplane.readTimeoutMs | quote }}
+  JAVA_OPTS: -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError

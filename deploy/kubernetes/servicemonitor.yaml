@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: carecopilot-backend
+  namespace: carecopilot
+  labels:
+    app: carecopilot-backend
+spec:
+  selector:
+    matchLabels:
+      app: carecopilot-backend
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
